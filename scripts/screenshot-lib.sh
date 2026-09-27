@@ -43,6 +43,10 @@ dismiss_system_dialogs() {
       return 0
     fi
   done
+  if adb shell dumpsys window | grep -qiE "Application Not Responding|isn't responding"; then
+    echo "A system dialog is still on screen; refusing to capture a broken screenshot." >&2
+    exit 1
+  fi
 }
 
 capture() {
