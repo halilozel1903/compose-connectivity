@@ -7,6 +7,12 @@ mkdir -p "$OUT"
 
 install_sample() {
   adb install -r sample/build/outputs/apk/debug/sample-debug.apk
+  # A freshly booted emulator often shows "Pixel Launcher isn't responding".
+  # Hide error/ANR dialogs and give the system time to settle.
+  adb shell settings put global hide_error_dialogs 1
+  adb shell settings put global anr_show_background 0
+  sleep 20
+  dismiss_system_dialogs
   # Clean status bar via System UI demo mode.
   adb shell settings put global sysui_demo_allowed 1
   adb shell am broadcast -a com.android.systemui.demo -e command enter
@@ -27,7 +33,20 @@ fresh_launch() {
   sleep 6
 }
 
+dismiss_system_dialogs() {
+  for _ in 1 2 3; do
+    if adb shell dumpsys window | grep -qiE "Application Not Responding|isn't responding"; then
+      adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null
+      adb shell input keyevent KEYCODE_ENTER
+      sleep 2
+    else
+      return 0
+    fi
+  done
+}
+
 capture() {
+  dismiss_system_dialogs
   adb exec-out screencap -p > "$OUT/$1.png"
   echo "Captured $1"
 }
